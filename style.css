@@ -42,23 +42,9 @@ h1 {
   flex: 1;
 }
 
-.checkbox {
-  margin-left: 10px;
-  transform: scale(1.3);
-}
-
 .button-container {
   text-align: center;
   margin-top: 30px;
-}
-
-button {
-  padding: 10px 20px;
-  font-size: 18px;
-  cursor: pointer;
-  border: none;
-  border-radius: 8px;
-  background-color: #ffcc00;
 }
 
 #result {
@@ -66,4 +52,23 @@ button {
   font-weight: bold;
   margin-top: 20px;
   font-size: 20px;
+}
+
+/* Nuevos estilos para selección y flechas */
+.selectable {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.selectable:hover {
+  background-color: #f0e68c;
+}
+
+.highlight {
+  border: 2px solid #0077cc;
+}
+
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }

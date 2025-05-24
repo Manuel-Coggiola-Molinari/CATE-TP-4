@@ -1,5 +1,8 @@
 let quotesData = [];
 let matchedCount = 0;
+let selectedImageEl = null;
+let lines = [];
+let lastWrongLine = null;  // ⬅️ Guardamos la línea incorrecta temporal
 
 async function loadQuotes() {
   const promises = [];
@@ -15,73 +18,99 @@ function renderGame() {
   const imagesColumn = document.getElementById("images-column");
   const quotesColumn = document.getElementById("quotes-column");
 
+  imagesColumn.innerHTML = '';
+  quotesColumn.innerHTML = '';
+  matchedCount = 0;
+  lines.forEach(line => line.remove());
+  lines = [];
+  lastWrongLine = null;
+
   const shuffledQuotes = [...quotesData].sort(() => Math.random() - 0.5);
 
   quotesData.forEach((item, index) => {
     const card = document.createElement("div");
-    card.className = "card";
+    card.className = "card selectable image";
+    card.dataset.index = index;
     card.innerHTML = `
       <img src="${item.image}" alt="${item.character}">
       <span>${item.character}</span>
-      <input type="checkbox" class="checkbox image-checkbox" data-index="${index}">
     `;
+    card.addEventListener('click', () => handleImageClick(card));
     imagesColumn.appendChild(card);
   });
 
   shuffledQuotes.forEach((item, index) => {
     const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML = `
-      <span>"${item.quote}"</span>
-      <input type="checkbox" class="checkbox quote-checkbox" data-character="${item.character}">
-    `;
+    card.className = "card selectable quote";
+    card.dataset.character = item.character;
+    card.innerHTML = `<span>"${item.quote}"</span>`;
+    card.addEventListener('click', () => handleQuoteClick(card));
     quotesColumn.appendChild(card);
   });
 }
 
-function checkMatch() {
-  const imageCheckboxes = document.querySelectorAll(".image-checkbox:not(:disabled)");
-  const quoteCheckboxes = document.querySelectorAll(".quote-checkbox:not(:disabled)");
+function handleImageClick(card) {
+  if (card.classList.contains("disabled")) return;
+  selectedImageEl = card;
+  highlight(card);
+}
 
-  const selectedImage = Array.from(imageCheckboxes).find(cb => cb.checked);
-  const selectedQuote = Array.from(quoteCheckboxes).find(cb => cb.checked);
+function handleQuoteClick(card) {
+  if (!selectedImageEl || card.classList.contains("disabled")) return;
 
+  const imgIndex = selectedImageEl.dataset.index;
+  const quoteCharacter = card.dataset.character;
   const resultDiv = document.getElementById("result");
 
-  if (!selectedImage || !selectedQuote) {
-    resultDiv.textContent = "Debes seleccionar una imagen y una frase.";
-    resultDiv.style.color = "red";
-    return;
+  const isCorrect = quotesData[imgIndex].character === quoteCharacter;
+
+  // Si había una línea incorrecta anterior, eliminarla
+  if (lastWrongLine) {
+    lastWrongLine.remove();
+    lastWrongLine = null;
   }
 
-  const imageIndex = selectedImage.getAttribute("data-index");
-  const quoteCharacter = selectedQuote.getAttribute("data-character");
+  const newLine = new LeaderLine(
+    LeaderLine.pointAnchor(selectedImageEl, { x: '100%' }),
+    LeaderLine.pointAnchor(card, { x: '0%' }),
+    {
+      color: isCorrect ? 'green' : 'red',
+      size: 4,
+      startPlug: 'disc',
+      endPlug: 'arrow',
+      path: 'straight'
+    }
+  );
 
-  if (quotesData[imageIndex].character === quoteCharacter) {
+  if (isCorrect) {
+    selectedImageEl.classList.add("disabled");
+    card.classList.add("disabled");
+    lines.push(newLine);
+    matchedCount++;
     resultDiv.textContent = "¡Correcto!";
     resultDiv.style.color = "green";
 
-    // Bloquear checkboxes acertados
-    selectedImage.disabled = true;
-    selectedQuote.disabled = true;
-    selectedImage.checked = false;
-    selectedQuote.checked = false;
-
-    matchedCount++;
-
-    // Recargar al acertar todos
     if (matchedCount === 5) {
-      resultDiv.textContent = "¡Completaste todos los pares correctamente! Recargando...";
-      setTimeout(() => location.reload(), 3000);
+      resultDiv.textContent = "¡Completaste todos los pares correctamente! Reiniciando...";
+      setTimeout(() => loadQuotes(), 3000);
     }
   } else {
     resultDiv.textContent = "Incorrecto. Intenta otra vez.";
     resultDiv.style.color = "red";
+    lastWrongLine = newLine; // Guardamos esta línea para borrarla si vuelve a fallar
   }
 
-  // Limpiar selección actual para evitar múltiples selecciones
-  document.querySelectorAll(".image-checkbox:not(:disabled)").forEach(cb => cb.checked = false);
-  document.querySelectorAll(".quote-checkbox:not(:disabled)").forEach(cb => cb.checked = false);
+  removeHighlight(selectedImageEl);
+  selectedImageEl = null;
+}
+
+function highlight(el) {
+  document.querySelectorAll(".selectable").forEach(e => e.classList.remove("highlight"));
+  el.classList.add("highlight");
+}
+
+function removeHighlight(el) {
+  if (el) el.classList.remove("highlight");
 }
 
 loadQuotes();
